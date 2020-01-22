@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 
-enum status {FOUND, NOT_FOUND, ABORT};
+enum status {FOUND, NO_SOLUTION, UNDECIDED, NEED_CHECKING, ABORT};
 typedef std::pair<unsigned int, unsigned int> uint_pair;
 
 // Vertex must know about ConstraintArc and vice-versa
@@ -119,6 +119,7 @@ public:
     bool debug = false;
     bool forward_checking = true;
     bool maintain_arc_consistency = true;
+    unsigned int branching_strategy = 3;
     Graph(const unsigned int &n);
     Graph(const unsigned int &n, const std::vector<uint_pair> &edges, const unsigned int &K);
     ~Graph(){
@@ -131,4 +132,7 @@ public:
     std::vector<unsigned int> get_solution() const;
     void make_arc_consistent(std::vector<uint_pair>& diff);
     void make_arc_consistent();
+    void branch_strat_1(status &s, Vertex *&current_var) const;
+    void branch_strat_2(status &s, Vertex *&current_var) const;
+    void branch_strat_3(status &s, Vertex *&current_var) const;
 };

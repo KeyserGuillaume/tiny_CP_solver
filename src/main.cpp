@@ -113,10 +113,10 @@ void full_benchmark() {
     std::vector<uint_pair> times(0);
 
     // n_queens
-    benchmark_queens(40, times);
+    //benchmark_queens(40, times);
 
     // graph coloring
-    std::vector<std::string> index = read_file_index("../../index.txt");
+    std::vector<std::string> index = read_file_index("../../../index.txt");
     for (unsigned int i = 0; i < index.size(); i++){
         clock_t t0 = clock();
         clock_t begin = t0;
@@ -129,30 +129,33 @@ void full_benchmark() {
 }
 
 int main() {
-//    full_benchmark();
+    full_benchmark();
 //    return 0;
     clock_t begin = clock();
 
     // test n-queens on an example
-    unsigned int n = 25;
-    Graph G(n);
-    unsigned int nb_nodes = 0;
-    std::cout << "start solve" << std::endl;
-    if(G.solve(begin + 3*60*CLOCKS_PER_SEC, nb_nodes) == FOUND) {
-        std::cout << nb_nodes << " nodes" << std::endl;
-        std::cout << n << "-queens has a solution:" << std::endl;
-        std::vector<unsigned int> solution = G.get_solution();
-        print_queens_solution(n, solution);
-    } else {
-        std::cout << n << "-queens has no solution." << std::endl;
-    }
-    return 0;
+//    unsigned int n = 60;
+//    Graph G(n);
+//    unsigned int nb_nodes = 0;
+//    std::cout << "start solve" << std::endl;
+//    status s = G.solve(begin + 3*60*CLOCKS_PER_SEC, nb_nodes);
+//    if(s == FOUND) {
+//        std::cout << nb_nodes << " nodes" << std::endl;
+//        std::cout << n << "-queens has a solution:" << std::endl;
+//        std::vector<unsigned int> solution = G.get_solution();
+//        print_queens_solution(n, solution);
+//    } else if (s == NO_SOLUTION){
+//        std::cout << n << "-queens has no solution: impossible" << std::endl;
+//    } else{
+//        std::cout << n << "-queens : solve was aborted" << std::endl;
+//    }
+//    return 0;
 
     // test graph coloring on an example
-//    std::string test_instance = "../../data/anna.col";
+    std::string test_instance = "../../data/anna.col";
 //    std::string test_instance = "../../data/david.col";
 //    std::string test_instance = "../../data/queen5_5.col";
-    std::string test_instance = "../../data/queen8_8.col";
+//    std::string test_instance = "../../data/queen8_8.col";
     std::cout << graph_coloring(test_instance, begin + 3*60*CLOCKS_PER_SEC) << std::endl;
     return 0;
 }

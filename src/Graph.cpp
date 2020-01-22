@@ -137,15 +137,17 @@ Graph::Graph(const unsigned int &n, const std::vector<uint_pair> &edges, const u
     std::vector<uint_pair> diff(0);
     unsigned int epsilon;
     unsigned int u, v, w;
-    if (!detect_triangle(edges, u, v, w)){
-        V[edges[0].first].set_value(0, diff, forward_checking, maintain_arc_consistency);
-        V[edges[0].second].set_value(1, diff, forward_checking, maintain_arc_consistency);
-        epsilon = 2;
-    } else {
+    if (detect_triangle(edges, u, v, w)){
         V[u].set_value(0, diff, forward_checking, maintain_arc_consistency);
         V[v].set_value(1, diff, forward_checking, maintain_arc_consistency);
         V[w].set_value(2, diff, forward_checking, maintain_arc_consistency);
         epsilon = 3;
+    } else if (edges.size() > 0) {
+        V[edges[0].first].set_value(0, diff, forward_checking, maintain_arc_consistency);
+        V[edges[0].second].set_value(1, diff, forward_checking, maintain_arc_consistency);
+        epsilon = 2;
+    } else { // this means the pb is trivial...
+        epsilon = 0;
     }
 
     // epsilon is the nb of preset colors (2 or 3)
@@ -177,26 +179,26 @@ Graph::Graph(const unsigned int &n, const std::vector<uint_pair> &edges, const u
 status Graph::solve(const clock_t &time_limit, unsigned int& nb_nodes) {
     if (nb_nodes == 0 && maintain_arc_consistency)
         make_arc_consistent();
-    // choose the variable on which we will do the branching
     nb_nodes++;
     if (clock() > time_limit)
         return ABORT;
-    Vertex* current_var = V;
-    while(current_var->get_nb_possible_values() <= 1 && current_var != V + n_V){
-        if (current_var->get_nb_possible_values() == 0)
-            return NOT_FOUND;
-        current_var++;
-    }
-    if (current_var == V + n_V){
+    // choose the variable on which we will do the branching
+    status s = UNDECIDED;
+    Vertex *current_var;
+    if (branching_strategy == 1)
+        branch_strat_1(s, current_var);
+    else if (branching_strategy == 2)
+        branch_strat_2(s, current_var);
+    else
+        branch_strat_3(s, current_var);
+
+    if (s == NEED_CHECKING){
         if (check_solution())
             return FOUND;
         else
-            return NOT_FOUND;
-    }
-    // check all variables have at least one possible value otherwise prune search tree
-    for (Vertex* u = current_var; u != V + n_V; u++)
-        if (u->get_nb_possible_values() == 0)
-            return NOT_FOUND;
+            return NO_SOLUTION;
+    } else if (s == NO_SOLUTION)
+        return NO_SOLUTION;
 
     // branch
     for (unsigned int i = 0; i < current_var->get_domain_size(); i++){
@@ -204,7 +206,7 @@ status Graph::solve(const clock_t &time_limit, unsigned int& nb_nodes) {
         std::vector<uint_pair> diff(0);
         current_var->set_value(i, diff, forward_checking, maintain_arc_consistency);
         status s = solve(time_limit, nb_nodes);
-        if (s != NOT_FOUND)
+        if (s != NO_SOLUTION)
             return s;
         // revert changes made
         for (unsigned int m = 0; m < diff.size(); m++)
@@ -212,7 +214,75 @@ status Graph::solve(const clock_t &time_limit, unsigned int& nb_nodes) {
     }
 
     // tell the previous call that no solution has been found
-    return NOT_FOUND;
+    return NO_SOLUTION;
+}
+
+void Graph::branch_strat_1(status &s, Vertex *&current_var) const {
+    // branch on first variable we can find with at least 2 possible values left
+    current_var = V;
+    while (current_var->get_nb_possible_values() <= 1 && current_var != V + n_V) {
+            if (current_var->get_nb_possible_values() == 0) {
+                s = NO_SOLUTION;
+                return;
+            }
+            current_var++;
+        }
+    if (current_var == V + n_V)
+            s = NEED_CHECKING;
+    // check all variables have at least one possible value otherwise prune search tree
+    for (Vertex *u = current_var; u != V + n_V; u++){
+            if (u->get_nb_possible_values() == 0) {
+                s = NO_SOLUTION;
+                return;
+            }
+        }
+}
+
+void Graph::branch_strat_2(status &s, Vertex *&current_var) const {
+    // branch on a variable with as few possible values left as possible (what we would instinctively do on sudoku)
+    unsigned int min = V->get_domain_size() + 1;
+    current_var = V;
+    for (unsigned int i = 0; i < n_V; i++){
+            unsigned int nb_val = V[i].get_nb_possible_values();
+            if (nb_val == 0) {
+                s = NO_SOLUTION;
+                return;
+            }
+            else if (nb_val > 1 && nb_val < min){
+                min = nb_val;
+                current_var = V + i;
+            }
+        }
+    if (min == V->get_domain_size() + 1)
+            s = NEED_CHECKING;
+}
+
+void Graph::branch_strat_3(status &s, Vertex *&current_var) const {
+    // branch on a variable with as few possible values left as possible (what we would instinctively do on sudoku)
+    // and (secondary objective) as many neighbors as possible (what we would do in graph coloring)
+    unsigned int min_nb_val = V->get_domain_size() + 1;
+    unsigned int max_nb_nei = 0;
+    current_var = V;
+    for (unsigned int i = 0; i < n_V; i++){
+            unsigned int nb_val = V[i].get_nb_possible_values();
+            if (nb_val == 0) {
+                s = NO_SOLUTION;
+                return;
+            }
+            else if (nb_val == 1)
+                continue;
+            else if (nb_val < min_nb_val){
+                min_nb_val = nb_val;
+                current_var = V + i;
+                max_nb_nei = V[i].get_delta_size();
+            }
+            else if (nb_val == min_nb_val && V[i].get_delta_size() > max_nb_nei){
+                max_nb_nei = V[i].get_delta_size();
+                current_var = V + i;
+            }
+        }
+    if (min_nb_val == V->get_domain_size() + 1)
+            s = NEED_CHECKING;
 }
 
 std::vector<unsigned int> Graph::get_solution() const {
