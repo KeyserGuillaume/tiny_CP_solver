@@ -63,15 +63,18 @@ int graph_coloring(const std::string& filename, const clock_t &time_limit){
     for (unsigned int i = 0; i < n; i++)
         if (degree[i] > max)
             max = degree[i];
-    int K = max - 1;
+    int K = max;
 
     // decrease K until no more solution
     while (K > 0){
+        unsigned int nb_nodes = 0;
         Graph G(n, edges, K);
-        status s = G.solve(time_limit);
+        status s = G.solve(time_limit, nb_nodes);
 //        if (s == FOUND){
 //            std::vector<unsigned int> sol = G.get_solution(); std::cout << sol[0] << " " << sol[4] << " " << sol[20] << " " << std::endl;
 //        }
+        if (s != FOUND)
+            std::cout << nb_nodes << " nodes" << std::endl;
         if (s == ABORT)
             return -1;
         else if (s == FOUND)
@@ -84,10 +87,11 @@ int graph_coloring(const std::string& filename, const clock_t &time_limit){
 
 void benchmark_queens(unsigned int n_max, std::vector<uint_pair> times) {
     for (unsigned int n = 2; n <= n_max; n++){
+        unsigned int nb_nodes = 0;
         clock_t begin = clock();
         clock_t t0 = clock();
         Graph G(n);
-        status s  = G.solve(begin + 3*60*CLOCKS_PER_SEC);
+        status s  = G.solve(begin + 3*60*CLOCKS_PER_SEC, nb_nodes);
         times.push_back(uint_pair(n, clock() - t0));
     }
 }
@@ -130,20 +134,25 @@ int main() {
     clock_t begin = clock();
 
     // test n-queens on an example
-//    unsigned int n = 5;
-//    Graph G(n);
-//    std::cout << "start solve" << std::endl;
-//    if(G.solve(begin + 3*60*CLOCKS_PER_SEC) == FOUND) {
-//        std::cout << n << "-queens has a solution:" << std::endl;
-//        std::vector<unsigned int> solution = G.get_solution();
-//        print_queens_solution(n, solution);
-//    } else {
-//        std::cout << n << "-queens has no solution." << std::endl;
-//    }
-//    return 0;
+    unsigned int n = 25;
+    Graph G(n);
+    unsigned int nb_nodes = 0;
+    std::cout << "start solve" << std::endl;
+    if(G.solve(begin + 3*60*CLOCKS_PER_SEC, nb_nodes) == FOUND) {
+        std::cout << nb_nodes << " nodes" << std::endl;
+        std::cout << n << "-queens has a solution:" << std::endl;
+        std::vector<unsigned int> solution = G.get_solution();
+        print_queens_solution(n, solution);
+    } else {
+        std::cout << n << "-queens has no solution." << std::endl;
+    }
+    return 0;
 
     // test graph coloring on an example
-//    std::cout << graph_coloring("../../data/anna.col", begin + 3*60*CLOCKS_PER_SEC) << std::endl;
-    std::cout << graph_coloring("../../data/queen5_5.col", begin + 3*60*CLOCKS_PER_SEC) << std::endl;
+//    std::string test_instance = "../../data/anna.col";
+//    std::string test_instance = "../../data/david.col";
+//    std::string test_instance = "../../data/queen5_5.col";
+    std::string test_instance = "../../data/queen8_8.col";
+    std::cout << graph_coloring(test_instance, begin + 3*60*CLOCKS_PER_SEC) << std::endl;
     return 0;
 }

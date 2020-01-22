@@ -33,10 +33,15 @@ void Vertex::set_value(const unsigned int &i, std::vector<uint_pair> &diff, cons
         }
     }
     // forward_checking
-    if (FC){
+    if (FC && !MAC)
         do_forward_checking(i, diff);
-    }
     // maintain_arc_consistency
+    if (MAC){
+        std::vector<ConstraintArc*> stack(0);
+        for (unsigned int s = 0; s < delta.size(); s++)
+            stack.push_back(delta[s]->get_symmetric());
+        arc_consistency_routine(stack, diff);
+    }
 }
 
 void Vertex::do_forward_checking(const unsigned int &i, std::vector<uint_pair> &diff) const {
@@ -77,12 +82,19 @@ Graph::Graph(const unsigned int &n) {
         for (unsigned int j = 0; j < i; j++) {
             if (i == n - 1 && j == 0){
                 A.push_back(new QueenSpecialArc(next_arc_index, V + i, V + j));
+                next_arc_index++;
                 A.push_back(new QueenSpecialArcBis(next_arc_index, V + j, V + i));
+                A[next_arc_index]->set_symmetric(A[next_arc_index - 1]);
+                A[next_arc_index - 1]->set_symmetric(A[next_arc_index]);
+                next_arc_index++;
             } else {
                 A.push_back(new QueenArc(next_arc_index, V + i, V + j));
+                next_arc_index++;
                 A.push_back(new QueenArc(next_arc_index, V + j, V + i));
+                A[next_arc_index]->set_symmetric(A[next_arc_index - 1]);
+                A[next_arc_index - 1]->set_symmetric(A[next_arc_index]);
+                next_arc_index++;
             }
-            next_arc_index++;
         }
     }
 
@@ -111,7 +123,10 @@ Graph::Graph(const unsigned int &n, const std::vector<uint_pair> &edges, const u
     for (unsigned int i = 0; i < edges.size(); i++) {
         if (edges[i].first > edges[i].second) continue;
         A.push_back(new DiffArc(next_arc_index, V + edges[i].first, V + edges[i].second));
+        next_arc_index++;
         A.push_back(new DiffArc(next_arc_index, V + edges[i].second, V + edges[i].first));
+        A[next_arc_index]->set_symmetric(A[next_arc_index - 1]);
+        A[next_arc_index - 1]->set_symmetric(A[next_arc_index]);
         next_arc_index++;
     }
 
@@ -143,17 +158,27 @@ Graph::Graph(const unsigned int &n, const std::vector<uint_pair> &edges, const u
     // the x_i are chosen among variables with the highest number of possible values left in the domain.
     for (unsigned int i = 0; i < K - epsilon; i++){
         Vertex* u = V;
-        unsigned int max = 0; while(u != V + n){if (u->get_nb_possible_values() > max) max = u->get_nb_possible_values(); u++;}
-        u = V;
-        while (u->get_nb_possible_values() != max) u++;
+//        unsigned int max = 0;
+//        while(u != V + n){
+//            if (u->get_nb_possible_values() > max)
+//                max = u->get_nb_possible_values();
+//            u++;
+//        }
+        u = V + i;
+//        while (u->get_nb_possible_values() != max)
+//            u++;
         for (unsigned int j = epsilon + i; j < K; j++)
-            u->disable_value(j);
+            if (u->is_possible(j))
+                u->disable_value(j);
     }
 }
 
 
-status Graph::solve(const clock_t &time_limit) {
+status Graph::solve(const clock_t &time_limit, unsigned int& nb_nodes) {
+    if (nb_nodes == 0 && maintain_arc_consistency)
+        make_arc_consistent();
     // choose the variable on which we will do the branching
+    nb_nodes++;
     if (clock() > time_limit)
         return ABORT;
     Vertex* current_var = V;
@@ -178,7 +203,7 @@ status Graph::solve(const clock_t &time_limit) {
         if (!current_var->is_possible(i)) continue;
         std::vector<uint_pair> diff(0);
         current_var->set_value(i, diff, forward_checking, maintain_arc_consistency);
-        status s = solve(time_limit);
+        status s = solve(time_limit, nb_nodes);
         if (s != NOT_FOUND)
             return s;
         // revert changes made
@@ -229,9 +254,9 @@ bool Graph::detect_triangle(const std::vector<uint_pair> &edges, unsigned int &u
     return false;
 }
 
-void Graph::make_arc_consistent(std::vector<unsigned int> &stack, std::vector<uint_pair> &diff) {
+void arc_consistency_routine(std::vector<ConstraintArc *> &stack, std::vector<uint_pair> &diff) {
     while (stack.size() > 0){
-        ConstraintArc* a = A[stack[stack.size() - 1]];
+        ConstraintArc* a = stack[stack.size() - 1];
         Vertex* u = a->get_u();
         Vertex* v = a->get_v();
         stack.pop_back();
@@ -243,11 +268,25 @@ void Graph::make_arc_consistent(std::vector<unsigned int> &stack, std::vector<ui
                     found = true;
             if (!found){
                 u->disable_value(m);
-                diff.push_back(uint_pair(u->id, m));
-
+                diff.push_back(uint_pair(u->get_id(), m));
+                for (unsigned int t = 0; t < u->get_delta_size(); t++)
+                    if (u->get_ith_constraint(t)->get_id() != a->get_id())
+                        stack.push_back(u->get_ith_constraint(t)->get_symmetric());
             }
         }
     }
+}
+
+void Graph::make_arc_consistent(std::vector<uint_pair> &diff) {
+    std::vector<ConstraintArc*> stack(0);
+    for (unsigned int i = 0; i < A.size(); i++)
+        stack.push_back(A[i]);
+    arc_consistency_routine(stack, diff);
+}
+
+void Graph::make_arc_consistent() {
+    std::vector<uint_pair> diff(0);
+    make_arc_consistent(diff);
 }
 
 //bool Graph::detect_odd_cycle(unsigned int &u, unsigned int &v, unsigned int &w) const {

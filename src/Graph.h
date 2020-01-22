@@ -50,6 +50,7 @@ class ConstraintArc{
 protected:
     unsigned int id;
     Vertex *u, *v;
+    ConstraintArc* symmetric;
 public:
     ConstraintArc(){}
     ConstraintArc(unsigned int id, Vertex* u, Vertex* v): id(id), u(u), v(v){}
@@ -60,6 +61,8 @@ public:
     Vertex* get_u() const {return u;}
     Vertex* get_v() const {return v;}
     unsigned int get_id()const{return id;}
+    void set_symmetric(ConstraintArc* a){symmetric = a;}
+    ConstraintArc* get_symmetric(){return symmetric;}
 };
 
 class DiffArc: public ConstraintArc{
@@ -99,13 +102,17 @@ public:
         return (QueenArc::are_compatible(i, j) && v->get_ith_value(j) > u->get_ith_value(i));}
 };
 
+
+void arc_consistency_routine(std::vector<ConstraintArc *> &stack, std::vector<uint_pair> &diff);
+
+
 class Graph{
 private:
     Vertex* V;
     std::vector<ConstraintArc*> A;
     unsigned int n_V;
 
-    bool detect_odd_cycle(unsigned int &u, unsigned int& v, unsigned int& w) const;
+    //bool detect_odd_cycle(unsigned int &u, unsigned int& v, unsigned int& w) const;
     bool detect_triangle(const std::vector<uint_pair> &edges, unsigned int &u, unsigned int& v, unsigned int& w) const;
 
 public:
@@ -120,7 +127,8 @@ public:
             delete [] A[i];
     }
     bool check_solution() const;
-    status solve(const clock_t &time_limit);
+    status solve(const clock_t &time_limit, unsigned int& nb_nodes);
     std::vector<unsigned int> get_solution() const;
-    void make_arc_consistent(std::vector<unsigned int> &stack, std::vector<uint_pair>& diff);
+    void make_arc_consistent(std::vector<uint_pair>& diff);
+    void make_arc_consistent();
 };
