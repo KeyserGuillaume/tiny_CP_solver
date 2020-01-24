@@ -80,7 +80,7 @@ Graph::Graph(const unsigned int &n) {
 
     for (unsigned int i = 0; i < n; i++) {
         for (unsigned int j = 0; j < i; j++) {
-            if (i == n - 1 && j == 0){
+            if (i == n - 1 && j == 0 && avoid_symmetries){
                 A.push_back(new QueenSpecialArc(next_arc_index, V + i, V + j));
                 next_arc_index++;
                 A.push_back(new QueenSpecialArcBis(next_arc_index, V + j, V + i));
@@ -133,6 +133,8 @@ Graph::Graph(const unsigned int &n, const std::vector<uint_pair> &edges, const u
     for (unsigned int i = 0; i < A.size(); i++){
         A[i]->fill_vertex_delta();
     }
+
+    if (!avoid_symmetries) return;
 
     std::vector<uint_pair> diff(0);
     unsigned int epsilon;
@@ -221,21 +223,21 @@ void Graph::branch_strat_1(status &s, Vertex *&current_var) const {
     // branch on first variable we can find with at least 2 possible values left
     current_var = V;
     while (current_var->get_nb_possible_values() <= 1 && current_var != V + n_V) {
-            if (current_var->get_nb_possible_values() == 0) {
-                s = NO_SOLUTION;
-                return;
-            }
-            current_var++;
+        if (current_var->get_nb_possible_values() == 0) {
+            s = NO_SOLUTION;
+            return;
         }
+        current_var++;
+    }
     if (current_var == V + n_V)
             s = NEED_CHECKING;
     // check all variables have at least one possible value otherwise prune search tree
     for (Vertex *u = current_var; u != V + n_V; u++){
-            if (u->get_nb_possible_values() == 0) {
-                s = NO_SOLUTION;
-                return;
-            }
+        if (u->get_nb_possible_values() == 0) {
+            s = NO_SOLUTION;
+            return;
         }
+    }
 }
 
 void Graph::branch_strat_2(status &s, Vertex *&current_var) const {
@@ -243,16 +245,16 @@ void Graph::branch_strat_2(status &s, Vertex *&current_var) const {
     unsigned int min = V->get_domain_size() + 1;
     current_var = V;
     for (unsigned int i = 0; i < n_V; i++){
-            unsigned int nb_val = V[i].get_nb_possible_values();
-            if (nb_val == 0) {
-                s = NO_SOLUTION;
-                return;
-            }
-            else if (nb_val > 1 && nb_val < min){
-                min = nb_val;
-                current_var = V + i;
-            }
+        unsigned int nb_val = V[i].get_nb_possible_values();
+        if (nb_val == 0) {
+            s = NO_SOLUTION;
+            return;
         }
+        else if (nb_val > 1 && nb_val < min){
+            min = nb_val;
+            current_var = V + i;
+        }
+    }
     if (min == V->get_domain_size() + 1)
             s = NEED_CHECKING;
 }

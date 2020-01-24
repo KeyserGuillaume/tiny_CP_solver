@@ -119,6 +119,7 @@ public:
     bool debug = false;
     bool forward_checking = true;
     bool maintain_arc_consistency = true;
+    bool avoid_symmetries = true;
     unsigned int branching_strategy = 3;
     Graph(const unsigned int &n);
     Graph(const unsigned int &n, const std::vector<uint_pair> &edges, const unsigned int &K);

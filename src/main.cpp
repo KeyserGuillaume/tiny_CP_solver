@@ -85,13 +85,16 @@ int graph_coloring(const std::string& filename, const clock_t &time_limit){
     return K + 1;
 }
 
-void benchmark_queens(unsigned int n_max, std::vector<uint_pair> times) {
-    for (unsigned int n = 2; n <= n_max; n++){
+void benchmark_queens(unsigned int n_max, std::vector<uint_pair> &times) {
+    for (unsigned int n = 4; n <= n_max; n++){
         unsigned int nb_nodes = 0;
         clock_t begin = clock();
         clock_t t0 = clock();
         Graph G(n);
+        std::cout << "solving " << n << "-queens" << std::endl;
         status s  = G.solve(begin + 3*60*CLOCKS_PER_SEC, nb_nodes);
+        if (s == ABORT)
+            return;
         times.push_back(uint_pair(n, clock() - t0));
     }
 }
@@ -108,15 +111,9 @@ void print_queens_solution(const unsigned int &n, const std::vector<unsigned int
         }
 }
 
-void full_benchmark() {
-    // full benchmark
+void graph_coloring_benchmark(const std::string& write_file) {
     std::vector<uint_pair> times(0);
-
-    // n_queens
-    //benchmark_queens(40, times);
-
-    // graph coloring
-    std::vector<std::string> index = read_file_index("../../../index.txt");
+    std::vector<std::string> index = read_file_index("../../../index_short.txt");
     for (unsigned int i = 0; i < index.size(); i++){
         clock_t t0 = clock();
         clock_t begin = t0;
@@ -125,31 +122,37 @@ void full_benchmark() {
     }
 
     // write results
-    write_times(times, "../../times_full.csv");
+    write_times(times, write_file);
 }
 
 int main() {
-    full_benchmark();
+//    std::vector<uint_pair> times(0);
+//    benchmark_queens(150, times);
+//    write_times(times, "../../times_queens_no_avoid_symmetries.txt");
+////    return 0;
+////
+//    graph_coloring_benchmark("../../times_graphs_no_avoid_symmetries.txt");
 //    return 0;
+
     clock_t begin = clock();
 
     // test n-queens on an example
-//    unsigned int n = 60;
-//    Graph G(n);
-//    unsigned int nb_nodes = 0;
-//    std::cout << "start solve" << std::endl;
-//    status s = G.solve(begin + 3*60*CLOCKS_PER_SEC, nb_nodes);
-//    if(s == FOUND) {
-//        std::cout << nb_nodes << " nodes" << std::endl;
-//        std::cout << n << "-queens has a solution:" << std::endl;
-//        std::vector<unsigned int> solution = G.get_solution();
-//        print_queens_solution(n, solution);
-//    } else if (s == NO_SOLUTION){
-//        std::cout << n << "-queens has no solution: impossible" << std::endl;
-//    } else{
-//        std::cout << n << "-queens : solve was aborted" << std::endl;
-//    }
-//    return 0;
+    unsigned int n = 80;
+    Graph G(n);
+    unsigned int nb_nodes = 0;
+    std::cout << "start solve" << std::endl;
+    status s = G.solve(begin + 3*60*CLOCKS_PER_SEC, nb_nodes);
+    if(s == FOUND) {
+        std::cout << nb_nodes << " nodes" << std::endl;
+        std::cout << n << "-queens has a solution:" << std::endl;
+        std::vector<unsigned int> solution = G.get_solution();
+        print_queens_solution(n, solution);
+    } else if (s == NO_SOLUTION){
+        std::cout << n << "-queens has no solution: impossible" << std::endl;
+    } else{
+        std::cout << n << "-queens : solve was aborted" << std::endl;
+    }
+    return 0;
 
     // test graph coloring on an example
     std::string test_instance = "../../data/anna.col";
